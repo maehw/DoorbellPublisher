@@ -32,6 +32,10 @@ The kit is originally powered by a 9V battery. Instead of using an additional ba
 
 The analog trigger signal is connected to the analog input signal pin `AD0` of the NodeMCU board.
 
+The hardware setup looks like the following:
+
+![Photo of the hardware setup](./images/hardware-setup.jpg)
+
 
 
 ## Software setup

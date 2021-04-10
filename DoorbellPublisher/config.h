@@ -1,7 +1,8 @@
-#define WIFI_SSID              "MyWifiSSID"
-#define WIFI_PASSWORD          "MyWifiPassword"
+#include "config_wifi.h" /* include WiFi settings from separate file */
+
 #define MQTT_SERVER_IP         "192.168.0.4" /* shall be a static IP address, not a hostname */
 #define MQTT_PORT              1883
+#define MQTT_CLIENT_ID         "DoorbellPublisher"
 #define MQTT_TOPIC_CONNECTION  "doorbell_connection"
 #define MQTT_MSG_HEARTBEAT     "heartbeat"
 #define MQTT_MSG_CONNECT       "connected"
@@ -12,7 +13,7 @@
 /* Sensor loop delay to busy wait and currently get a sample interval of approx. 3 ms, i.e. a sampling frequency of 333 Hz. */
 #define SENSOR_LOOP_DELAY       (3u) /* loop delay in milliseconds */
 
-#define SENSOR_THRESHOLD        (50.0f)
+#define SENSOR_THRESHOLD        (40.0f)
 
 #define SENSOR_CNT_LIMIT        (15u)
 

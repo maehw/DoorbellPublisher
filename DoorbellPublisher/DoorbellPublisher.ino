@@ -4,7 +4,7 @@
 #include <Wire.h>
 #include "SSD1306Wire.h"
 
-/* Local includes */
+/* Local project-wide includes */
 #include "images.h"
 #include "config.h"
 
@@ -27,18 +27,24 @@ volatile float g_fSensorOffsetVoltage = 0.0f;
 
 void setup()
 {
+    /* Initialize serial communication */
     Serial.begin(SERIAL_BAUDRATE);
     Serial.println();
 
+    /* Initialize display, set its orientation */
     display.init();
     display.flipScreenVertically();
 
+    /* Initialize WiFi and MQTT connections */
     setup_wifi();
     setup_mqtt();
 
-    /* Offset voltage measurement at the end due to powerbank issues */
+    /* Offset voltage measurement at the end due to powerbank issues;
+     * result is shown on the display
+     */
     delay(2000);
-    setup_offset_voltage();  
+    setup_offset_voltage();
+    delay(3000);
 }
 
 void setup_offset_voltage(void)
@@ -50,6 +56,7 @@ void setup_offset_voltage(void)
     const uint16_t nNumSamples = 4096;
     char sDisplayText[32];
 
+    /* Take nNumSamples samples from the ADC and calculate average value */
     for( uint16_t k = 0; k < nNumSamples; k++ )
     {
         nConversionValue = analogRead(ANALOG_INPUT_PIN);
@@ -57,10 +64,15 @@ void setup_offset_voltage(void)
         fMilliVoltsAccu += fMilliVolts;
     }
     fMilliVoltsAvg = fMilliVoltsAccu/nNumSamples;
-    snprintf(sDisplayText, 31, "%.2f", fMilliVoltsAvg);
 
+    /* Store average value as sensor offset voltage for operation;
+     * depends on the setup and the resistors being used,
+     * but should be aroud mid-supply voltage, i.e. 3.3V/2 = 1.65V
+     */
     g_fSensorOffsetVoltage = fMilliVoltsAvg;
 
+    /* Show average value on the display */
+    snprintf(sDisplayText, 31, "%.2f", fMilliVoltsAvg);
     display.clear();
     display.setTextAlignment(TEXT_ALIGN_CENTER);
     display.setFont(ArialMT_Plain_16);
@@ -69,7 +81,10 @@ void setup_offset_voltage(void)
     display.drawString(64, 34, "mV average.");
     display.display();
 
-    delay(3000);
+    /* also print value to serial */
+    Serial.print("Average voltage (offset): ");
+    Serial.print(sDisplayText);
+    Serial.println(" mV average.");
 }
 
 void mqtt_reconnect()
@@ -79,10 +94,10 @@ void mqtt_reconnect()
     // Loop until we're reconnected
     while( !client.connected() )
     {
-        Serial.print("Attempting MQTT connection...");
+        Serial.print("Attempting MQTT connection... ");
 
-        // Attempt to (re-)connect
-        if( client.connect("DoorbellPublisher", "", "") )
+        /* Attempt to (re-)connect only using client ID, no username/password */
+        if( client.connect(MQTT_CLIENT_ID) )
         {
             Serial.println("connected");
         }
@@ -95,15 +110,17 @@ void mqtt_reconnect()
 
             Serial.print("failed, rc=");
             Serial.print(client.state());
-            Serial.println(" trying again in 5 seconds");
-            // Wait 5 seconds before retrying
-            delay(5000);
+            Serial.println(" trying again in 3 seconds");
+            // Wait 3 seconds before retrying
+            delay(3000);
         }
     }
 
     if( bBroken )
     {
-        /* connection was broken (could not directly be re-established; should remove the broken link symbol */
+        /* connection was broken (could not directly be re-established) but is no longer bruken now;
+         * broken link symbol is cleared from the display!
+         */
         display.clear();
         display.display();
     }
@@ -131,12 +148,8 @@ void setup_wifi()
         delay(500);
         Serial.print(".");
     }
-  
-    Serial.println("");
-    Serial.println("WiFi connected.");
-    Serial.print("IP address: ");
-    Serial.println(WiFi.localIP());
 
+    /* show ocnnection info on display */
     display.clear();
     display.setFont(ArialMT_Plain_10);
     display.setTextAlignment(TEXT_ALIGN_CENTER);
@@ -144,6 +157,12 @@ void setup_wifi()
     display.setFont(ArialMT_Plain_16);
     display.drawString(64, 40, WiFi.localIP().toString() );
     display.display();
+
+    /* print connection info to serial console */
+    Serial.println("");
+    Serial.println("WiFi connected.");
+    Serial.print("IP address: ");
+    Serial.println(WiFi.localIP());
 
     delay(3000);
 }
@@ -304,6 +323,7 @@ bool detectDoorbell(float fVoltage)
         }
     }
 
+    /* check if counter has reached limit for doorbell detection */
     if( nCnt > SENSOR_CNT_LIMIT )
     {
         // detected
@@ -332,7 +352,7 @@ bool detectDoorbell(float fVoltage)
     Serial.print(", Count: ");
     Serial.print( nCnt );
     Serial.print(", Out: ");
-    Serial.print( bDetected ? 300 : 0 ); /* use scale factor of 300 for display alignment in Serial Monitor */
+    Serial.print( bDetected ? 300 : 0 ); /* use scale factor of 300 for display alignment in Arduino's Serial Plotter */
     Serial.println("");
 #endif
 
